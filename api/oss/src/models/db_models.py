@@ -530,3 +530,48 @@ class APIKeyDB(Base):
     project = relationship(
         "oss.src.models.db_models.ProjectDB", backref="api_key_project"
     )
+
+class TaskDB(Base):
+    __tablename__ = "tasks"
+
+    id = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid7,
+        unique=True,
+        nullable=False,
+    )
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    config_parameters = Column(
+        mutable_json_type(dbtype=JSONB, nested=True),  # type: ignore
+        nullable=True,
+        default=dict,
+    )
+    project_id = Column(
+        UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    testset_id = Column(
+        UUID(as_uuid=True), ForeignKey("testsets.id", ondelete="CASCADE"), nullable=False
+    )
+    evaluator_config_id = Column(
+        UUID(as_uuid=True), ForeignKey("auto_evaluator_configs.id", ondelete="CASCADE"), nullable=False
+    )
+    app_id = Column(
+        UUID(as_uuid=True), ForeignKey("app_db.id", ondelete="SET NULL"), nullable=True
+    )
+    app_variant_id = Column(
+        UUID(as_uuid=True), ForeignKey("app_variants.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+
+    project = relationship("ProjectDB")
+    testset = relationship("TestSetDB")
+    evaluator_config = relationship("EvaluatorConfigDB")
+    app = relationship("AppDB")
+    app_variant = relationship("AppVariantDB")
