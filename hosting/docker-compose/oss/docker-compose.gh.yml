@@ -299,6 +299,54 @@ services:
             retries: 5
         restart: always
 
+    hasura:
+        image: hasura/graphql-engine:v2.44.0
+        depends_on:
+            postgres:
+                condition: service_healthy
+        ports:
+            - "${HASURA_PORT:-8090}:8080"
+        env_file:
+            - ${ENV_FILE:-./.env.oss.gh}
+        environment:
+            ## Database URL for Hasura - connecting to agenta_oss_core as primary database
+            HASURA_GRAPHQL_DATABASE_URL: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@postgres:5432/agenta_oss_core
+            
+            ## Enable console (set to false in production)
+            HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+            
+            ## Enable dev mode (set to false in production)
+            HASURA_GRAPHQL_DEV_MODE: "true"
+            
+            ## Admin secret for Hasura Console access
+            HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-hasura_admin_secret}
+            
+            ## Enable the metadata database (uses the same DB as data)
+            HASURA_GRAPHQL_METADATA_DATABASE_URL: postgresql://${POSTGRES_USERNAME}:${POSTGRES_PASSWORD}@postgres:5432/agenta_oss_core
+            
+            ## Enable query logging
+            HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+            
+            ## Naming convention for auto-generated names
+            HASURA_GRAPHQL_DEFAULT_NAMING_CONVENTION: hasura-default
+            
+        labels:
+            - "traefik.http.routers.hasura.rule=PathPrefix(`/hasura`)"
+            - "traefik.http.routers.hasura.entrypoints=web"
+            - "traefik.http.middlewares.hasura-strip.stripprefix.prefixes=/hasura"
+            - "traefik.http.routers.hasura.middlewares=hasura-strip"
+            - "traefik.http.services.hasura.loadbalancer.server.port=8080"
+            - "traefik.http.routers.hasura.service=hasura"
+        networks:
+            - agenta-oss-gh-network
+        restart: always
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 30s
+
 networks:
     agenta-oss-gh-network:
 
